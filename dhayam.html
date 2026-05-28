@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>7x7 Dhayam Online Sandbox</title>
     
+    <!-- 1. Firebase Core Engine Scripts -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -31,7 +32,7 @@
         /* 7x7 Board Grid */
         .board-wrapper { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
         .grid-7x7 { display: grid; grid-template-columns: repeat(7, 65px); grid-template-rows: repeat(7, 65px); gap: 6px; background: #0f172a; padding: 12px; border-radius: 12px; }
-        .cell { background: white; border-radius: 8px; display: flex; justify-content: center; align-items: center; position: relative; font-size: 0.75rem; color: #94a3b8; user-select: none; transition: background 0.15s ease; cursor: pointer; }
+        .cell { background: white; border-radius: 8px; display: flex; justify-content: center; align-items: center; position: relative; font-size: 0.75rem; color: #94a3b8; user-select: none; transition: background 0.15s ease; cursor: pointer; width: 65px; height: 65px; }
         .cell:hover { background: #f8fafc; }
         
         /* Traditional Visual Checkpoints Mapping styling */
@@ -62,17 +63,20 @@
 </head>
 <body>
 
+    <!-- Stage 1: Google Authentication Lobby Gateway -->
     <div id="auth-screen" class="auth-panel">
         <h2 style="color: #0f172a;">Dhayam Online Sandbox</h2>
         <p style="color: #64748b; margin-top: 8px; font-size: 0.95rem;">Connect to the shared match matrix via Gmail authentication.</p>
         <button class="login-btn" onclick="signInWithGoogle()">Sign in with Google</button>
     </div>
 
+    <!-- Stage 2: Unified Real-Time Sandbox Board Space -->
     <div id="game-interface">
         <h2 id="welcome-banner" style="color: #0f172a;">Strategy Sandbox</h2>
         <div id="room-info" style="color: #64748b; font-size: 0.85rem; font-weight: 600; margin-top: 4px;">Room Connection: Initializing...</div>
         
         <div class="game-container">
+            <!-- Game Sidebar Actions & State Tracking -->
             <div class="control-panel">
                 <h3 id="turn-indicator" style="margin-bottom: 15px; color: #1e293b;">Waiting for Authentication...</h3>
                 
@@ -92,6 +96,7 @@
                 </div>
             </div>
 
+            <!-- The Core 7x7 Board Map Grid -->
             <div class="board-wrapper">
                 <div id="board-grid" class="grid-7x7"></div>
             </div>
@@ -159,6 +164,13 @@
             db.collection("rooms").doc(gameRoomId).onSnapshot((doc) => {
                 if (doc.exists) {
                     const data = doc.data();
+                    
+                    // SAFETY FALLBACK: If the document exists but data arrays are empty, trigger prompt setup!
+                    if (!data.players || data.players.length === 0) {
+                        createNewRoomInCloud();
+                        return;
+                    }
+
                     rolledBank = data.rolledBank || [];
                     currentTurnIdx = data.currentTurnIdx || 0;
                     tokensOnBoard = data.tokensOnBoard || [];
@@ -200,6 +212,10 @@
                 tokensOnBoard: [],
                 globalStartingCoins: setupCoins,
                 players: initialPlayersList
+            }).then(() => {
+                console.log("Room initialized successfully.");
+            }).catch((err) => {
+                console.error("Initialization Failed:", err);
             });
         }
 
@@ -221,7 +237,7 @@
         }
 
         function nextPlayerTurn() {
-            if (players.length === 0) return;
+            if (!players || players.length === 0) return;
             currentTurnIdx = (currentTurnIdx + 1) % players.length;
             db.collection("rooms").doc(gameRoomId).update({
                 currentTurnIdx: currentTurnIdx,
@@ -244,7 +260,7 @@
         }
 
         function handleCellClick(cellIdx) {
-            if (!selectedTokenData || players.length === 0) return;
+            if (!selectedTokenData || !players || players.length === 0) return;
             let activePlayer = players[currentTurnIdx];
 
             if (selectedTokenData.source === 'tray') {
@@ -266,7 +282,6 @@
                         tokensOnBoard = tokensOnBoard.filter(t => t.id !== tokenInstance.id);
                         players[tokenInstance.playerIdx].tokensInSuccessYard++;
                     } else {
-                        // Execution of clean landing cuts
                         if (!safeHavenCells.includes(cellIdx)) {
                             let victims = tokensOnBoard.filter(t => t.cellIdx === cellIdx && t.playerIdx !== currentTurnIdx);
                             victims.forEach(v => {
@@ -289,7 +304,7 @@
         function renderGlobalStatusMatrix() {
             const table = document.getElementById('matrix-table');
             table.innerHTML = '';
-            if (players.length === 0) return;
+            if (!players || players.length === 0) return;
 
             let headerRow = document.createElement('tr');
             let cornerTh = document.createElement('th');
@@ -332,9 +347,11 @@
         }
 
         function renderEverything() {
-            if (players.length === 0) return;
+            if (!players || players.length === 0) return;
             
             const activePlayer = players[currentTurnIdx];
+            if (!activePlayer) return;
+
             document.getElementById('turn-indicator').innerText = `${activePlayer.name.toUpperCase()}'s Turn`;
             document.getElementById('turn-indicator').style.borderLeft = `8px solid ${colorPalette[currentTurnIdx % 4]}`;
             document.getElementById('tray-title').innerText = `${activePlayer.name}'s Interactive Yard:`;
@@ -372,7 +389,7 @@
                 activeTray.appendChild(trayToken);
             }
 
-            // Reconstruct the 7x7 grid array matrix visually without raw sequential cell counters
+            // Reconstruct the 7x7 grid array matrix visually
             const gridContainer = document.getElementById('board-grid');
             gridContainer.innerHTML = '';
 
@@ -413,6 +430,7 @@
 
                 Object.keys(groups).forEach(pIdxStr => {
                     let pIdx = parseInt(pIdxStr);
+                    if (!players[pIdx]) return;
                     let cluster = groups[pIdx];
                     let tokenNameSymbol = players[pIdx].name.charAt(0).toUpperCase();
 
