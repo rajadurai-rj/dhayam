@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <title>7x7 Dhayam Online Sandbox</title>
     
-    <!-- 1. Firebase Core Engine Scripts -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -19,35 +18,35 @@
         .login-btn:hover { background: #357ae8; }
         
         /* Game Layout Containers */
-        #game-interface { display: none; width: 100%; max-width: 1000px; }
+        #game-interface { display: none; width: 100%; max-width: 1100px; }
         .game-container { display: flex; gap: 20px; justify-content: center; margin-top: 20px; flex-wrap: wrap; }
         
         /* Control Panel & Roll Banks */
-        .control-panel { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); flex: 1; min-width: 280px; }
-        .dice-btn { background: #0f172a; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 600; margin-bottom: 15px; width: 100%; }
+        .control-panel { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); flex: 1; min-width: 300px; max-width: 360px; }
+        .dice-btn { background: #0f172a; color: white; border: none; padding: 12px 20px; border-radius: 6px; cursor: pointer; font-weight: 600; margin-bottom: 15px; width: 100%; font-size: 0.95rem; }
         .dice-btn:hover { background: #1e293b; }
-        .roll-bank-display { background: #f8fafc; border: 2px dashed #cbd5e1; padding: 12px; border-radius: 6px; min-height: 50px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 15px; }
-        .roll-chip { background: #ef4444; color: white; font-weight: bold; padding: 4px 10px; border-radius: 12px; font-size: 0.85rem; cursor: pointer; }
+        .roll-bank-display { background: #f8fafc; border: 2px dashed #cbd5e1; padding: 12px; border-radius: 6px; min-height: 55px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 15px; }
+        .roll-chip { background: #ef4444; color: white; font-weight: bold; padding: 6px 12px; border-radius: 12px; font-size: 0.85rem; cursor: pointer; }
         
-        /* 7x7 Board Grid */
-        .board-wrapper { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-        .grid-7x7 { display: grid; grid-template-columns: repeat(7, 65px); grid-template-rows: repeat(7, 65px); gap: 6px; background: #0f172a; padding: 12px; border-radius: 12px; }
-        .cell { background: white; border-radius: 8px; display: flex; justify-content: center; align-items: center; position: relative; font-size: 0.75rem; color: #94a3b8; user-select: none; transition: background 0.15s ease; cursor: pointer; width: 65px; height: 65px; }
-        .cell:hover { background: #f8fafc; }
+        /* Fixed 7x7 Board Grid Selection Blueprint */
+        .board-wrapper { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); display: inline-block; }
+        #board-grid { display: grid; grid-template-columns: repeat(7, 65px); grid-template-rows: repeat(7, 65px); gap: 6px; background: #0f172a; padding: 12px; border-radius: 12px; }
+        .cell { background: white; border-radius: 6px; display: flex; justify-content: center; align-items: center; position: relative; user-select: none; transition: background 0.15s ease; cursor: pointer; width: 65px; height: 65px; }
+        .cell:hover { background: #f1f5f9; }
         
-        /* Traditional Visual Checkpoints Mapping styling */
+        /* Traditional Visual Checkpoints Layout Rules */
         .cell.safe-haven { background: #e2e8f0 !important; }
         .cell.safe-haven::after { content: "✕"; position: absolute; font-size: 1.8rem; color: #94a3b8; font-weight: normal; z-index: 1; }
-        .cell.center-hub { background: #0f172a !important; color: #f1f5f9 !important; font-size: 0.75rem; font-weight: bold; border: 2px dashed #f1f5f9 !important; box-sizing: border-box; }
+        .cell.center-hub { background: #0f172a !important; color: #f1f5f9 !important; font-size: 0.8rem; font-weight: bold; border: 2px dashed #f1f5f9 !important; box-sizing: border-box; }
         .cell.selected-cell { background: #bae6fd !important; }
 
         /* Dynamic Tray Layouts */
-        .token-tray { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 5px; min-height: 35px; margin-bottom: 15px; }
-        .tray-heading { font-size: 0.8rem; color: #64748b; margin-top: 8px; margin-bottom: 4px; font-weight: bold; }
+        .token-tray { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 5px; min-height: 40px; margin-bottom: 15px; }
+        .tray-heading { font-size: 0.85rem; color: #64748b; margin-top: 10px; margin-bottom: 6px; font-weight: bold; }
 
         /* Player Tokens styling */
         .token-container { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; align-items: center; width: 100%; height: 100%; padding: 2px; box-sizing: border-box; position: absolute; z-index: 5; pointer-events: none; }
-        .token { padding: 2px 6px; min-width: 24px; height: 24px; border-radius: 12px; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.3); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; color: white; font-weight: bold; pointer-events: auto; box-sizing: border-box; white-space: nowrap; }
+        .token { padding: 2px 6px; min-width: 26px; height: 26px; border-radius: 13px; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.3); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; color: white; font-weight: bold; pointer-events: auto; box-sizing: border-box; white-space: nowrap; }
         .token.p1 { background: #dc2626; }
         .token.p2 { background: #2563eb; }
         .token.p3 { background: #ea580c; }
@@ -63,22 +62,19 @@
 </head>
 <body>
 
-    <!-- Stage 1: Google Authentication Lobby Gateway -->
     <div id="auth-screen" class="auth-panel">
         <h2 style="color: #0f172a;">Dhayam Online Sandbox</h2>
         <p style="color: #64748b; margin-top: 8px; font-size: 0.95rem;">Connect to the shared match matrix via Gmail authentication.</p>
         <button class="login-btn" onclick="signInWithGoogle()">Sign in with Google</button>
     </div>
 
-    <!-- Stage 2: Unified Real-Time Sandbox Board Space -->
     <div id="game-interface">
         <h2 id="welcome-banner" style="color: #0f172a;">Strategy Sandbox</h2>
         <div id="room-info" style="color: #64748b; font-size: 0.85rem; font-weight: 600; margin-top: 4px;">Room Connection: Initializing...</div>
         
         <div class="game-container">
-            <!-- Game Sidebar Actions & State Tracking -->
             <div class="control-panel">
-                <h3 id="turn-indicator" style="margin-bottom: 15px; color: #1e293b;">Waiting for Authentication...</h3>
+                <h3 id="turn-indicator" style="margin-bottom: 15px; color: #1e293b; padding-left: 8px;">Waiting for Authentication...</h3>
                 
                 <button class="dice-btn" onclick="rollSandboxDice()">Roll Strategy Dice</button>
                 
@@ -96,9 +92,8 @@
                 </div>
             </div>
 
-            <!-- The Core 7x7 Board Map Grid -->
             <div class="board-wrapper">
-                <div id="board-grid" class="grid-7x7"></div>
+                <div id="board-grid"></div>
             </div>
         </div>
     </div>
@@ -135,7 +130,7 @@
         const centerHubCell = 24;
         const colorPalette = ['#dc2626', '#2563eb', '#ea580c', '#7c3aed'];
 
-        // Get custom room parameters directly from browser address routing
+        // Extract custom room codes directly from URL path routing parameters
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('room')) {
             gameRoomId = urlParams.get('room');
@@ -154,7 +149,7 @@
                 })
                 .catch((err) => {
                     console.error("Auth Failed:", err);
-                    alert("Authentication Error. Ensure keys are properly assigned.");
+                    alert("Authentication Error. Check Firebase Console settings.");
                 });
         }
 
@@ -165,7 +160,7 @@
                 if (doc.exists) {
                     const data = doc.data();
                     
-                    // SAFETY FALLBACK: If the document exists but data arrays are empty, trigger prompt setup!
+                    // Fallback to initialization layout parameters if empty or corrupt records found
                     if (!data.players || data.players.length === 0) {
                         createNewRoomInCloud();
                         return;
@@ -206,16 +201,24 @@
                 });
             }
 
+            // Lock values to local memory scope first to block asynchronous race condition gaps
+            players = initialPlayersList;
+            globalStartingCoins = setupCoins;
+            rolledBank = [];
+            tokensOnBoard = [];
+            currentTurnIdx = 0;
+
+            renderEverything();
+
+            // Sync structural parameters directly to the live Firestore collection node
             db.collection("rooms").doc(gameRoomId).set({
                 currentTurnIdx: 0,
                 rolledBank: [],
                 tokensOnBoard: [],
                 globalStartingCoins: setupCoins,
                 players: initialPlayersList
-            }).then(() => {
-                console.log("Room initialized successfully.");
             }).catch((err) => {
-                console.error("Initialization Failed:", err);
+                console.error("Initialization Sync Failed:", err);
             });
         }
 
@@ -389,7 +392,7 @@
                 activeTray.appendChild(trayToken);
             }
 
-            // Reconstruct the 7x7 grid array matrix visually
+            // Reconstruct the 7x7 grid matrix layout mapping securely
             const gridContainer = document.getElementById('board-grid');
             gridContainer.innerHTML = '';
 
@@ -415,7 +418,7 @@
                     }
                 }
 
-                // Inject internal structural layer container for tokens housing
+                // Inject internal structural layer container for token housing
                 const tokenContainer = document.createElement('div');
                 tokenContainer.className = 'token-container';
                 cellElement.appendChild(tokenContainer);
