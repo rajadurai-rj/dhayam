@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <title>7x7 Dhayam Online Sandbox</title>
     
-    <!-- 1. Firebase Core Engine Scripts -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -24,45 +23,56 @@
         
         /* Control Panel & Roll Banks */
         .control-panel { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); flex: 1; min-width: 280px; }
-        .dice-btn { background: #0f172a; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 600; margin-bottom: 15px; }
+        .dice-btn { background: #0f172a; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 600; margin-bottom: 15px; width: 100%; }
         .dice-btn:hover { background: #1e293b; }
         .roll-bank-display { background: #f8fafc; border: 2px dashed #cbd5e1; padding: 12px; border-radius: 6px; min-height: 50px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 15px; }
-        .roll-chip { background: #ef4444; color: white; font-weight: bold; padding: 4px 10px; border-radius: 12px; font-size: 0.85rem; }
+        .roll-chip { background: #ef4444; color: white; font-weight: bold; padding: 4px 10px; border-radius: 12px; font-size: 0.85rem; cursor: pointer; }
         
         /* 7x7 Board Grid */
         .board-wrapper { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-        .grid-7x7 { display: grid; grid-template-columns: repeat(7, 65px); grid-template-rows: repeat(7, 65px); gap: 4px; background: #cbd5e1; padding: 4px; border-radius: 4px; }
-        .cell { background: white; border-radius: 2px; display: flex; justify-content: center; align-items: center; position: relative; font-size: 0.75rem; color: #94a3b8; user-select: none; }
+        .grid-7x7 { display: grid; grid-template-columns: repeat(7, 65px); grid-template-rows: repeat(7, 65px); gap: 6px; background: #0f172a; padding: 12px; border-radius: 12px; }
+        .cell { background: white; border-radius: 8px; display: flex; justify-content: center; align-items: center; position: relative; font-size: 0.75rem; color: #94a3b8; user-select: none; transition: background 0.15s ease; cursor: pointer; }
+        .cell:hover { background: #f8fafc; }
         
-        /* Specialized Strategic Checkpoints */
-        .cell.safe-haven { background: #dcfce7; border: 2px solid #22c55e; }
-        .cell.center-hub { background: #fef08a; border: 2px dashed #eab308; }
-        
+        /* Traditional Visual Checkpoints Mapping styling */
+        .cell.safe-haven { background: #e2e8f0 !important; }
+        .cell.safe-haven::after { content: "✕"; position: absolute; font-size: 1.8rem; color: #94a3b8; font-weight: normal; z-index: 1; }
+        .cell.center-hub { background: #0f172a !important; color: #f1f5f9 !important; font-size: 0.75rem; font-weight: bold; border: 2px dashed #f1f5f9 !important; box-sizing: border-box; }
+        .cell.selected-cell { background: #bae6fd !important; }
+
+        /* Dynamic Tray Layouts */
+        .token-tray { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 5px; min-height: 35px; margin-bottom: 15px; }
+        .tray-heading { font-size: 0.8rem; color: #64748b; margin-top: 8px; margin-bottom: 4px; font-weight: bold; }
+
         /* Player Tokens styling */
-        .token { width: 24px; height: 24px; border-radius: 50%; display: inline-flex; justify-content: center; align-items: center; color: white; font-weight: bold; font-size: 0.75rem; cursor: pointer; border: 2px solid rgba(255,255,255,0.8); box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .token-container { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; align-items: center; width: 100%; height: 100%; padding: 2px; box-sizing: border-box; position: absolute; z-index: 5; pointer-events: none; }
+        .token { padding: 2px 6px; min-width: 24px; height: 24px; border-radius: 12px; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.3); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; color: white; font-weight: bold; pointer-events: auto; box-sizing: border-box; white-space: nowrap; }
         .token.p1 { background: #dc2626; }
         .token.p2 { background: #2563eb; }
-        .token.p3 { background: #16a34a; }
-        .token.p4 { background: #d97706; }
-        .token.selected { outline: 3px solid #7c3aed; transform: scale(1.15); box-shadow: 0 0 8px #7c3aed; }
+        .token.p3 { background: #ea580c; }
+        .token.p4 { background: #7c3aed; }
+        .token.selected { outline: 3px solid #3b82f6; transform: scale(1.15); z-index: 15; }
+
+        /* Global Status Panel Board */
+        .status-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; text-align: center; margin-top: 10px; }
+        .status-table th, .status-table td { border: 1px solid #cbd5e1; padding: 8px; }
+        .status-table th { background: #f1f5f9; color: #334155; font-weight: bold; }
+        .status-table td.label-cell { font-weight: bold; text-align: left; background: #f8fafc; color: #475569; width: 80px; }
     </style>
 </head>
 <body>
 
-    <!-- Stage 1: Google Authentication Lobby Gateway -->
     <div id="auth-screen" class="auth-panel">
         <h2 style="color: #0f172a;">Dhayam Online Sandbox</h2>
         <p style="color: #64748b; margin-top: 8px; font-size: 0.95rem;">Connect to the shared match matrix via Gmail authentication.</p>
         <button class="login-btn" onclick="signInWithGoogle()">Sign in with Google</button>
     </div>
 
-    <!-- Stage 2: Unified Real-Time Sandbox Board Space -->
     <div id="game-interface">
         <h2 id="welcome-banner" style="color: #0f172a;">Strategy Sandbox</h2>
         <div id="room-info" style="color: #64748b; font-size: 0.85rem; font-weight: 600; margin-top: 4px;">Room Connection: Initializing...</div>
         
         <div class="game-container">
-            <!-- Game Sidebar Actions & State Tracking -->
             <div class="control-panel">
                 <h3 id="turn-indicator" style="margin-bottom: 15px; color: #1e293b;">Waiting for Authentication...</h3>
                 
@@ -71,10 +81,17 @@
                 <div style="font-size: 0.85rem; font-weight: 600; color: #475569; margin-bottom: 6px;">Active Roll Bank:</div>
                 <div id="roll-bank-box" class="roll-bank-display"></div>
                 
+                <div class="tray-heading" id="tray-title">Active Yard Deployments:</div>
+                <div id="active-player-tray" class="token-tray"></div>
+
                 <button class="dice-btn" style="background:#64748b;" onclick="nextPlayerTurn()">Pass Action Turn</button>
+
+                <div style="margin-top: 15px;">
+                    <strong style="font-size:0.9rem; color:#1e293b; display:block; margin-bottom:6px;">Global Player Status Matrix</strong>
+                    <table class="status-table" id="matrix-table"></table>
+                </div>
             </div>
 
-            <!-- The Core 7x7 Board Map Grid -->
             <div class="board-wrapper">
                 <div id="board-grid" class="grid-7x7"></div>
             </div>
@@ -82,7 +99,7 @@
     </div>
 
     <script>
-        // Paste your unique Firebase Object keys here inside this exact configuration map:
+        // Unique Firebase Configuration Map Keys
         const firebaseConfig = {
             apiKey: "AIzaSyCE1Y-fFIWAvMy3zeLhDW_3K66y4-AyjqE",
             authDomain: "dhayam-online.firebaseapp.com",
@@ -100,22 +117,24 @@
         let currentUser = null;
         let gameRoomId = "global_shared_room"; 
 
-        // Core Game Engine State Framework
+        // Core Dynamic Properties
         let currentTurnIdx = 0;
         let rolledBank = [];
         let selectedTokenData = null;
-        
-        // Setup initial mock token deployments on the 7x7 matrix cells for sandbox manipulation
-        let tokensOnBoard = [
-            { id: 'p1_1', playerIdx: 0, cellIdx: 3 },  // Red starting line positions
-            { id: 'p1_2', playerIdx: 0, cellIdx: 24 }, 
-            { id: 'p2_1', playerIdx: 1, cellIdx: 45 }, // Blue positional assets
-            { id: 'p3_1', playerIdx: 2, cellIdx: 27 }  // Green positional assets
-        ];
+        let tokensOnBoard = [];
+        let players = [];
+        let globalStartingCoins = 6;
 
-        // Safe Haven Map Checkpoints definitions inside the 7x7 system
-        const safeHavenCells = [3, 11, 23, 25, 27, 37, 45];
+        // Traditional Layout Mappings
+        const safeHavenCells = [3, 9, 13, 21, 27, 35, 39, 45];
         const centerHubCell = 24;
+        const colorPalette = ['#dc2626', '#2563eb', '#ea580c', '#7c3aed'];
+
+        // Get custom room parameters directly from browser address routing
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('room')) {
+            gameRoomId = urlParams.get('room');
+        }
 
         function signInWithGoogle() {
             const provider = new firebase.auth.GoogleAuthProvider();
@@ -130,20 +149,21 @@
                 })
                 .catch((err) => {
                     console.error("Auth Failed:", err);
-                    alert("Authentication Error. Ensure keys are updated.");
+                    alert("Authentication Error. Ensure keys are properly assigned.");
                 });
         }
 
         function initializeOnlineRoom() {
             document.getElementById('room-info').innerText = `Connected Room ID: ${gameRoomId}`;
 
-            // Real-time listener: Fires whenever database state changes anywhere in the world
             db.collection("rooms").doc(gameRoomId).onSnapshot((doc) => {
                 if (doc.exists) {
                     const data = doc.data();
                     rolledBank = data.rolledBank || [];
                     currentTurnIdx = data.currentTurnIdx || 0;
                     tokensOnBoard = data.tokensOnBoard || [];
+                    players = data.players || [];
+                    globalStartingCoins = data.globalStartingCoins || 6;
                     
                     renderEverything();
                 } else {
@@ -153,14 +173,36 @@
         }
 
         function createNewRoomInCloud() {
+            let countInput = prompt("How many players are joining the game? (2-4)", "4");
+            let playerCount = parseInt(countInput) || 4;
+            if (playerCount < 2) playerCount = 2;
+            if (playerCount > 4) playerCount = 4;
+
+            let coinInput = prompt("Enter total number of coins per player:", "6");
+            let setupCoins = parseInt(coinInput) || 6;
+
+            let initialPlayersList = [];
+            for (let i = 0; i < playerCount; i++) {
+                let defaultName = `Player ${i + 1}`;
+                if (i === 0 && currentUser) defaultName = currentUser.displayName.split(' ')[0];
+                
+                initialPlayersList.push({
+                    name: defaultName,
+                    index: i,
+                    tokensInYard: setupCoins,
+                    tokensInSuccessYard: 0
+                });
+            }
+
             db.collection("rooms").doc(gameRoomId).set({
                 currentTurnIdx: 0,
                 rolledBank: [],
-                tokensOnBoard: tokensOnBoard
+                tokensOnBoard: [],
+                globalStartingCoins: setupCoins,
+                players: initialPlayersList
             });
         }
 
-        // Action: Roll Dice and sync to firestore document space
         function rollSandboxDice() {
             const values = [1, 2, 3, 4, 5, 6, 12];
             const roll = values[Math.floor(Math.random() * values.length)];
@@ -171,20 +213,29 @@
             });
         }
 
-        // Action: Advance Engine Turn and wipe clear previous rolls
+        function removeBankDie(idx) {
+            rolledBank.splice(idx, 1);
+            db.collection("rooms").doc(gameRoomId).update({
+                rolledBank: rolledBank
+            });
+        }
+
         function nextPlayerTurn() {
-            currentTurnIdx = (currentTurnIdx + 1) % 4;
+            if (players.length === 0) return;
+            currentTurnIdx = (currentTurnIdx + 1) % players.length;
             db.collection("rooms").doc(gameRoomId).update({
                 currentTurnIdx: currentTurnIdx,
                 rolledBank: []
             });
         }
 
-        // Option 1 Implementation: Clean, restriction-free selection logic
+        function selectTokenFromTray() {
+            selectedTokenData = { source: 'tray' };
+            renderEverything();
+        }
+
         function selectTokenFromBoard(playerIdx, cellIdx, event) {
             event.stopPropagation();
-            
-            // Pure sandbox control: You select ANY token you click, bypassing yard blocks completely
             let matchedToken = tokensOnBoard.find(t => t.playerIdx === playerIdx && t.cellIdx === cellIdx);
             if (matchedToken) {
                 selectedTokenData = { source: 'board', id: matchedToken.id, playerIdx: playerIdx };
@@ -192,63 +243,194 @@
             }
         }
 
-        // Target cell drop location execution
         function handleCellClick(cellIdx) {
-            if (selectedTokenData && selectedTokenData.source === 'board') {
+            if (!selectedTokenData || players.length === 0) return;
+            let activePlayer = players[currentTurnIdx];
+
+            if (selectedTokenData.source === 'tray') {
+                if (activePlayer.tokensInYard <= 0) return;
+                
+                if (cellIdx === centerHubCell) {
+                    activePlayer.tokensInYard--;
+                    activePlayer.tokensInSuccessYard++;
+                } else {
+                    let nextId = `tk_${currentTurnIdx}_${Date.now()}`;
+                    tokensOnBoard.push({ id: nextId, playerIdx: currentTurnIdx, cellIdx: cellIdx });
+                    activePlayer.tokensInYard--;
+                }
+            } 
+            else if (selectedTokenData.source === 'board') {
                 let tokenInstance = tokensOnBoard.find(t => t.id === selectedTokenData.id);
                 if (tokenInstance) {
-                    tokenInstance.cellIdx = cellIdx; // Update location index
-                    selectedTokenData = null;       // Reset active hold selection
-                    
-                    // Push the updated map configuration array to the cloud
-                    db.collection("rooms").doc(gameRoomId).update({
-                        tokensOnBoard: tokensOnBoard
-                    });
+                    if (cellIdx === centerHubCell) {
+                        tokensOnBoard = tokensOnBoard.filter(t => t.id !== tokenInstance.id);
+                        players[tokenInstance.playerIdx].tokensInSuccessYard++;
+                    } else {
+                        // Execution of clean landing cuts
+                        if (!safeHavenCells.includes(cellIdx)) {
+                            let victims = tokensOnBoard.filter(t => t.cellIdx === cellIdx && t.playerIdx !== currentTurnIdx);
+                            victims.forEach(v => {
+                                players[v.playerIdx].tokensInYard++;
+                                tokensOnBoard = tokensOnBoard.filter(t => t.id !== v.id);
+                            });
+                        }
+                        tokenInstance.cellIdx = cellIdx;
+                    }
                 }
             }
+
+            selectedTokenData = null;
+            db.collection("rooms").doc(gameRoomId).update({
+                tokensOnBoard: tokensOnBoard,
+                players: players
+            });
         }
 
-        // Visual Layout Interface Builder Logic
+        function renderGlobalStatusMatrix() {
+            const table = document.getElementById('matrix-table');
+            table.innerHTML = '';
+            if (players.length === 0) return;
+
+            let headerRow = document.createElement('tr');
+            let cornerTh = document.createElement('th');
+            cornerTh.innerText = 'Yard';
+            headerRow.appendChild(cornerTh);
+
+            players.forEach(p => {
+                let th = document.createElement('th');
+                th.innerText = p.name;
+                th.style.borderTop = `4px solid ${colorPalette[p.index % 4]}`;
+                headerRow.appendChild(th);
+            });
+            table.appendChild(headerRow);
+
+            let activeRow = document.createElement('tr');
+            let activeLabelTd = document.createElement('td');
+            activeLabelTd.className = 'label-cell';
+            activeLabelTd.innerText = 'Active';
+            activeRow.appendChild(activeLabelTd);
+
+            players.forEach(p => {
+                let td = document.createElement('td');
+                td.innerText = p.tokensInYard;
+                activeRow.appendChild(td);
+            });
+            table.appendChild(activeRow);
+
+            let successRow = document.createElement('tr');
+            let successLabelTd = document.createElement('td');
+            successLabelTd.className = 'label-cell';
+            successLabelTd.innerText = 'Success';
+            successRow.appendChild(successLabelTd);
+
+            players.forEach(p => {
+                let td = document.createElement('td');
+                td.innerText = p.tokensInSuccessYard;
+                successRow.appendChild(td);
+            });
+            table.appendChild(successRow);
+        }
+
         function renderEverything() {
-            document.getElementById('turn-indicator').innerText = `Player ${currentTurnIdx + 1}'s Turn`;
+            if (players.length === 0) return;
             
+            const activePlayer = players[currentTurnIdx];
+            document.getElementById('turn-indicator').innerText = `${activePlayer.name.toUpperCase()}'s Turn`;
+            document.getElementById('turn-indicator').style.borderLeft = `8px solid ${colorPalette[currentTurnIdx % 4]}`;
+            document.getElementById('tray-title').innerText = `${activePlayer.name}'s Interactive Yard:`;
+            
+            renderGlobalStatusMatrix();
+
             // Render Dice Bank Area
             const bankBox = document.getElementById('roll-bank-box');
             bankBox.innerHTML = '';
-            rolledBank.forEach(val => {
-                const chip = document.createElement('span');
-                chip.className = 'roll-chip';
-                chip.innerText = val;
-                bankBox.appendChild(chip);
-            });
+            if (rolledBank.length === 0) {
+                bankBox.innerText = "No active rolls";
+            } else {
+                rolledBank.forEach((val, idx) => {
+                    const chip = document.createElement('span');
+                    chip.className = 'roll-chip';
+                    chip.innerText = val;
+                    chip.onclick = () => removeBankDie(idx);
+                    bankBox.appendChild(chip);
+                });
+            }
 
-            // Reconstruct the 7x7 grid array matrix visually
+            // Render Player Interactive Onboarding Yard
+            const activeTray = document.getElementById('active-player-tray');
+            activeTray.innerHTML = '';
+            if (activePlayer.tokensInYard <= 0) {
+                activeTray.innerHTML = '<span style="color:#a0aec0; font-size:0.8rem; font-style:italic;">Yard Empty</span>';
+            } else {
+                const isSel = (selectedTokenData && selectedTokenData.source === 'tray');
+                let symbol = activePlayer.name.charAt(0).toUpperCase();
+                let trayToken = document.createElement('div');
+                trayToken.className = `token p${(currentTurnIdx % 4) + 1}`;
+                if (isSel) trayToken.classList.add('selected');
+                trayToken.innerText = `${symbol} ×${activePlayer.tokensInYard}`;
+                trayToken.onclick = () => selectTokenFromTray();
+                activeTray.appendChild(trayToken);
+            }
+
+            // Reconstruct the 7x7 grid array matrix visually without raw sequential cell counters
             const gridContainer = document.getElementById('board-grid');
             gridContainer.innerHTML = '';
 
             for (let i = 0; i < 49; i++) {
                 const cellElement = document.createElement('div');
                 cellElement.className = 'cell';
-                cellElement.innerText = i;
                 cellElement.onclick = () => handleCellClick(i);
 
-                // Apply visual color mapping for strategic spaces
-                if (safeHavenCells.includes(i)) cellElement.classList.add('safe-haven');
-                if (i === centerHubCell) cellElement.classList.add('center-hub');
+                // Apply Traditional Layout Filters
+                if (safeHavenCells.includes(i)) {
+                    cellElement.classList.add('safe-haven');
+                }
+                if (i === centerHubCell) {
+                    cellElement.classList.add('center-hub');
+                    cellElement.innerText = 'GOAL';
+                }
 
-                // Identify if tokens reside inside this grid coordinate index space
+                // Check active cell selection outlines
+                if (selectedTokenData && selectedTokenData.source === 'board') {
+                    let activeToken = tokensOnBoard.find(t => t.id === selectedTokenData.id);
+                    if (activeToken && activeToken.cellIdx === i) {
+                        cellElement.classList.add('selected-cell');
+                    }
+                }
+
+                // Inject internal structural layer container for tokens housing
+                const tokenContainer = document.createElement('div');
+                tokenContainer.className = 'token-container';
+                cellElement.appendChild(tokenContainer);
+
+                // Compress stacking structures by matching player owners
                 let occupants = tokensOnBoard.filter(t => t.cellIdx === i);
-                occupants.forEach(tok => {
+                let groups = {};
+                occupants.forEach(t => {
+                    if (!groups[t.playerIdx]) groups[t.playerIdx] = [];
+                    groups[t.playerIdx].push(t);
+                });
+
+                Object.keys(groups).forEach(pIdxStr => {
+                    let pIdx = parseInt(pIdxStr);
+                    let cluster = groups[pIdx];
+                    let tokenNameSymbol = players[pIdx].name.charAt(0).toUpperCase();
+
                     const tokElement = document.createElement('div');
-                    tokElement.className = `token p${tok.playerIdx + 1}`;
-                    tokElement.innerText = tok.id.split('_')[1];
+                    tokElement.className = `token p${(pIdx % 4) + 1}`;
                     
-                    if (selectedTokenData && selectedTokenData.id === tok.id) {
+                    if (cluster.length > 1) {
+                        tokElement.innerText = `${tokenNameSymbol}×${cluster.length}`;
+                    } else {
+                        tokElement.innerText = tokenNameSymbol;
+                    }
+                    
+                    if (selectedTokenData && selectedTokenData.source === 'board' && cluster.some(t => t.id === selectedTokenData.id)) {
                         tokElement.classList.add('selected');
                     }
                     
-                    tokElement.onclick = (e) => selectTokenFromBoard(tok.playerIdx, i, e);
-                    cellElement.appendChild(tokElement);
+                    tokElement.onclick = (e) => selectTokenFromBoard(pIdx, i, e);
+                    tokenContainer.appendChild(tokElement);
                 });
 
                 gridContainer.appendChild(cellElement);
