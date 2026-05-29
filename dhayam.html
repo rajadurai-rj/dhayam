@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>7x7 Dhayam Online Sandbox</title>
     
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -10,7 +11,7 @@
 
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f1f5f9; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f1f5f9; padding: 15px; display: flex; flex-direction: column; align-items: center; }
         
         /* Auth Screen Styling */
         .auth-panel { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); margin-top: 60px; text-align: center; max-width: 420px; width: 100%; }
@@ -19,7 +20,7 @@
         
         /* Game Layout Containers */
         #game-interface { display: none; width: 100%; max-width: 1200px; }
-        .game-container { display: flex; gap: 20px; justify-content: center; margin-top: 20px; flex-wrap: wrap; align-items: flex-start; }
+        .game-container { display: flex; gap: 20px; justify-content: center; margin-top: 15px; flex-wrap: wrap; align-items: flex-start; }
         
         /* Control Panel & Roll Banks */
         .control-panel { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); flex: 1; min-width: 320px; max-width: 380px; }
@@ -73,12 +74,13 @@
         .status-table th { background: #f1f5f9; color: #334155; font-weight: bold; }
         .status-table td.label-cell { font-weight: bold; text-align: left; background: #f8fafc; color: #475569; width: 80px; }
 
-        /* Help Accordion Section */
-        .instructions-panel { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-top: 20px; max-width: 1200px; width: 100%; }
-        .instructions-header { font-size: 1.1rem; font-weight: bold; color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none; }
-        .instructions-content { display: block; font-size: 0.9rem; color: #475569; line-height: 1.6; }
-        .instructions-content ul { padding-left: 20px; margin-top: 8px; margin-bottom: 8px; }
-        .instructions-content li { margin-bottom: 4px; }
+        /* Mobile Optimization Media Rules */
+        @media (max-width: 768px) {
+            #board-grid { grid-template-columns: repeat(7, 45px) !important; grid-template-rows: repeat(7, 45px) !important; gap: 4px !important; padding: 8px !important; }
+            .cell { width: 45px !important; height: 45px !important; }
+            .cell.safe-haven::after { font-size: 1.3rem; }
+            .token { min-width: 18px; height: 18px; font-size: 9px; padding: 1px 3px; }
+        }
     </style>
 </head>
 <body>
@@ -90,15 +92,22 @@
     </div>
 
     <div id="game-interface">
-        <h2 id="welcome-banner" style="color: #0f172a;">Strategy Sandbox</h2>
-        <div id="room-info" style="color: #64748b; font-size: 0.85rem; font-weight: 600; margin-top: 4px;">Room Connection: Initializing...</div>
+        
+        <div style="width: 100%; display: flex; justify-content: space-between; align-items: center; background: white; padding: 12px 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 10px;">
+            <h2 id="welcome-banner" style="color: #0f172a; margin: 0; font-size: 1.1rem;">Strategy Sandbox</h2>
+            <a href="#" style="color: #2563eb; font-weight: 600; text-decoration: none; font-size: 0.95rem; display: flex; align-items: center; gap: 4px;" onclick="toggleInstructions(true)">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                Help
+            </a>
+        </div>
+        <div id="room-info" style="color: #64748b; font-size: 0.8rem; font-weight: 600; padding-left: 6px;">Room Connection: Initializing...</div>
         
         <div class="game-container">
             <div class="control-panel">
                 
                 <div id="lobby-section" class="lobby-box">
                     <div class="lobby-title">
-                        <span>Lobby Status</span>
+                        <span>Lobby Matrix</span>
                         <span id="lobby-state-tag" style="color:#eab308; font-size:0.8rem;">Waiting...</span>
                     </div>
                     <div id="player-badge-list" class="player-badge-list">
@@ -136,39 +145,28 @@
             </div>
         </div>
 
-        <div class="instructions-panel">
-            <div class="instructions-header" onclick="toggleInstructions()">
-                <span>Dhayam Traditional Rules & Instructions</span>
-                <span id="accordion-arrow">▼</span>
-            </div>
-            <div id="instructions-content" class="instructions-content">
-                <p>Welcome to the Dhayam Sandbox. This traditional Indian board game is played on a 7x7 grid. The objective is to navigate all your pieces from your starting courtyard along the outer loop, loop into the inner lanes, and successfully land them into the center <strong>GOAL</strong> box.</p>
-                <ul style="margin-top: 10px;">
-                    <li><strong>Entering the Board:</strong> A piece can only leave your personal yard and enter active board play when you roll a <strong>1 (Dhayam)</strong> or a <strong>5</strong>.</li>
-                    <li><strong>Rolling Dice:</strong> Click "Roll Strategy Dice" to generate steps. Rolling a 1, 5, 6, or 12 grants you an extra bonus roll. All rolls accumulate into your <strong>Active Roll Bank</strong>.</li>
-                    <li><strong>Executing Movements:</strong> Select a token, then click a target cell to move it by clicking/spending an item from your roll bank.</li>
-                    <li><strong>Safe Havens (Malai ✕):</strong> The 8 marked cross cells are standard safe zones. Opposite player tokens can sit in the same safe haven without cutting each other.</li>
-                    <li><strong>Cutting Opponents:</strong> Landing your token on a normal square occupied by a different player cuts their token, instantly sending it back to their starting yard.</li>
-                    <li><strong>Snapshot Recovery:</strong> If a mistake or accidental misclick happens during gameplay, use the <strong>"Restore Bank Snapshot"</strong> feature to instantly revert the bank and board to the previous turn state.</li>
-                </ul>
+        <div id="instructions-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); z-index: 100; justify-content: center; align-items: center; padding: 20px;" onclick="toggleInstructions(false)">
+            <div style="background: white; width: 100%; max-width: 520px; border-radius: 12px; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); max-height: 85vh; overflow-y: auto;" onclick="event.stopPropagation()">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px;">
+                    <h3 style="color: #0f172a; margin: 0;">Dhayam Sandbox Rules</h3>
+                    <button onclick="toggleInstructions(false)" style="background: none; border: none; font-size: 1.5rem; color: #94a3b8; cursor: pointer;">&times;</button>
+                </div>
+                <div style="font-size: 0.9rem; color: #475569; line-height: 1.6;">
+                    <p>This is a free-movement sandbox board. Players act as referees to implement traditional tactical rules using the sandbox tools and rollback states.</p>
+                    <ul style="padding-left: 20px; margin-top: 12px; list-style-type: none;">
+                        <li style="margin-bottom: 10px; border-left: 3px solid #dc2626; padding-left: 8px;"><strong>1) First Onboarding (Dhayam):</strong> You must roll a strict <strong>1 (Dhayam)</strong> to active your very first coin out onto the board. Until then, pass your turn.</li>
+                        <li style="margin-bottom: 10px; border-left: 3px solid #2563eb; padding-left: 8px;"><strong>2) Yard Spawn Constraints:</strong> A <strong>1 or 5</strong> can only be spent to move coins already active on the grid if your starting Yard is completely empty. If coins are in the yard, 1 or 5 must be used to onboard them.</li>
+                        <li style="margin-bottom: 10px; border-left: 3px solid #ea580c; padding-left: 8px;"><strong>3) Inner Spiral Entry Cut:</strong> You are forbidden from turning off the outer loop into the inner gateway lanes leading to the center goal unless your color has <strong>cut at least one opponent coin</strong>.</li>
+                        <li style="margin-bottom: 10px; border-left: 3px solid #7c3aed; padding-left: 8px;"><strong>4) Complete Bank Movement:</strong> Every turn, you must strategically use **all values sitting in your active roll bank** (including all 1, 5, 6, 12 bonuses). Rolls cannot be discarded.</li>
+                        <li style="margin-bottom: 10px; border-left: 3px solid #10b981; padding-left: 8px;"><strong>5) Cut Avoidance Rollback:</strong> If a path choice lands you in an unwanted trap, forces an unwanted cut, or leaves you stuck with illegal leftover bank numbers, use **"Restore Bank Snapshot"** to rewind your entire turn and pick a completely different path.</li>
+                    </ul>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
-        // Placeholder helper for the instruction toggle
-        function toggleInstructions() {
-            const content = document.getElementById('instructions-content');
-            const arrow = document.getElementById('accordion-arrow');
-            if (content.style.display === "none") {
-                content.style.display = "block";
-                arrow.innerText = "▼";
-            } else {
-                content.style.display = "none";
-                arrow.innerText = "▲";
-            }
-        }
-    // Unique Firebase Configuration Map Keys
+        // Unique Firebase Configuration Map Keys
         const firebaseConfig = {
             apiKey: "AIzaSyCE1Y-fFIWAvMy3zeLhDW_3K66y4-AyjqE",
             authDomain: "dhayam-online.firebaseapp.com",
@@ -195,18 +193,18 @@
         let globalStartingCoins = 6;
         let gameStarted = false;
 
-        // Traditional Layout Mappings (100% Verified 7x7 Grid Coordinate Matrix)
+        // Traditional Layout Mappings (100% Accurate 7x7 Grid Indexing)
         const safeHavenCells = [3, 8, 12, 21, 27, 36, 40, 45];
         const centerHubCell = 24;
         const colorPalette = ['#dc2626', '#2563eb', '#ea580c', '#7c3aed'];
 
-        // Extract custom room codes directly from URL path routing parameters
+        // Extract room parameters from URL
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('room')) {
             gameRoomId = urlParams.get('room');
         }
 
-        // --- AUTHENTICATION INTERFACE LAYER ---
+        // --- AUTHENTICATION LAYER ---
         function signInWithGoogle() {
             const provider = new firebase.auth.GoogleAuthProvider();
             auth.signInWithPopup(provider)
@@ -214,17 +212,17 @@
                     currentUser = result.user;
                     document.getElementById('auth-screen').style.display = 'none';
                     document.getElementById('game-interface').style.display = 'block';
-                    document.getElementById('welcome-banner').innerText = `Hello, ${currentUser.displayName}!`;
+                    document.getElementById('welcome-banner').innerText = `Hello, ${currentUser.displayName.split(' ')[0]}!`;
                     
                     initializeOnlineRoom();
                 })
                 .catch((err) => {
                     console.error("Auth Failed:", err);
-                    alert("Authentication Error. Check Firebase Console settings.");
+                    alert("Authentication Error.");
                 });
         }
 
-        // --- REALTIME FIRESTORE LOBBY SYNC ---
+        // --- REALTIME FIRESTORE SYNC ---
         function initializeOnlineRoom() {
             document.getElementById('room-info').innerText = `Connected Room ID: ${gameRoomId}`;
 
@@ -241,7 +239,6 @@
                     updateLobbyUI(data.waitingLobby || []);
                     renderEverything();
                 } else {
-                    // Initialize clean room state if it doesn't exist yet
                     db.collection("rooms").doc(gameRoomId).set({
                         gameStarted: false,
                         waitingLobby: [],
@@ -287,11 +284,9 @@
                 listContainer.appendChild(badge);
             });
 
-            // Show Join button only if current authenticated user isn't in lobby yet
             const alreadyJoined = waitingLobby.some(p => p.uid === currentUser.uid);
             joinBtn.style.display = alreadyJoined ? "none" : "block";
 
-            // First player to join acts as Host and holds Start permissions
             if (waitingLobby[0] && waitingLobby[0].uid === currentUser.uid && waitingLobby.length >= 2) {
                 startBtn.style.display = "block";
             } else {
@@ -301,7 +296,6 @@
 
         function joinLobbyMatch() {
             if (!currentUser) return;
-            
             const roomRef = db.collection("rooms").doc(gameRoomId);
             db.runTransaction(async (transaction) => {
                 const sfDoc = await transaction.get(roomRef);
@@ -320,7 +314,6 @@
 
         function launchLobbyGame() {
             const roomRef = db.collection("rooms").doc(gameRoomId);
-            
             roomRef.get().then((doc) => {
                 if (!doc.exists) return;
                 const lobby = doc.data().waitingLobby || [];
@@ -334,7 +327,6 @@
                     tokensInSuccessYard: 0
                 }));
 
-                // Take initial state snapshot before saving match launch sequence
                 saveStateSnapshot([], [], initialPlayersList, 0);
 
                 roomRef.update({
@@ -347,7 +339,7 @@
             });
         }
 
-        // --- SNAPSHOT RESTORE STATE HISTORY ENGINE ---
+        // --- SNAPSHOT CORE MATRIX LOGGER ---
         function saveStateSnapshot(bank, tokens, playersList, turn) {
             db.collection("rooms").doc(gameRoomId).collection("history").add({
                 timestamp: firebase.firestore.FieldValue.serverTimestamp(),
@@ -366,15 +358,12 @@
                 .then((snapshot) => {
                     if (!snapshot.empty) {
                         const previousState = snapshot.docs[0].data();
-                        
-                        // Revert active main room record back to previous values
                         db.collection("rooms").doc(gameRoomId).update({
                             rolledBank: previousState.rolledBank,
                             tokensOnBoard: previousState.tokensOnBoard,
                             players: previousState.players,
                             currentTurnIdx: previousState.currentTurnIdx
                         }).then(() => {
-                            // Wipe the restored snapshot instance out of tracking history
                             snapshot.docs[0].ref.delete();
                         });
                     } else {
@@ -383,15 +372,13 @@
                 });
         }
 
-        // --- CORE GAME BOX INTERACTION LOGIC ---
+        // --- GAME ACTIONS ---
         function rollSandboxDice() {
             if (!gameStarted) return;
             const values = [1, 2, 3, 4, 5, 6, 12];
             const roll = values[Math.floor(Math.random() * values.length)];
             
-            // Create backup log snapshot prior to action
             saveStateSnapshot(rolledBank, tokensOnBoard, players, currentTurnIdx);
-
             rolledBank.push(roll);
             db.collection("rooms").doc(gameRoomId).update({ rolledBank: rolledBank });
         }
@@ -404,10 +391,8 @@
 
         function nextPlayerTurn() {
             if (!players || players.length === 0) return;
-            
             saveStateSnapshot(rolledBank, tokensOnBoard, players, currentTurnIdx);
             currentTurnIdx = (currentTurnIdx + 1) % players.length;
-            
             db.collection("rooms").doc(gameRoomId).update({
                 currentTurnIdx: currentTurnIdx,
                 rolledBank: []
@@ -432,7 +417,6 @@
             if (!selectedTokenData || !players || players.length === 0) return;
             let activePlayer = players[currentTurnIdx];
 
-            // Verify if action is being taken by authenticated current user turn
             if (activePlayer.uid !== currentUser.uid) {
                 alert("It is not your turn!");
                 return;
@@ -442,7 +426,6 @@
 
             if (selectedTokenData.source === 'tray') {
                 if (activePlayer.tokensInYard <= 0) return;
-                
                 if (cellIdx === centerHubCell) {
                     activePlayer.tokensInYard--;
                     activePlayer.tokensInSuccessYard++;
@@ -478,7 +461,7 @@
             });
         }
 
-        // --- BOARD RENDERING ENGINE ---
+        // --- RENDER PLATFORM ---
         function renderGlobalStatusMatrix() {
             const table = document.getElementById('matrix-table');
             table.innerHTML = '';
@@ -539,7 +522,6 @@
             
             renderGlobalStatusMatrix();
 
-            // Render Dice Bank Area
             const bankBox = document.getElementById('roll-bank-box');
             bankBox.innerHTML = '';
             if (rolledBank.length === 0) {
@@ -554,7 +536,6 @@
                 });
             }
 
-            // Render Player Interactive Onboarding Yard
             const activeTray = document.getElementById('active-player-tray');
             activeTray.innerHTML = '';
             if (activePlayer.tokensInYard <= 0) {
@@ -570,7 +551,6 @@
                 activeTray.appendChild(trayToken);
             }
 
-            // Build 7x7 Layout Matrix
             const gridContainer = document.getElementById('board-grid');
             gridContainer.innerHTML = '';
 
@@ -625,16 +605,9 @@
             }
         }
 
-        function toggleInstructions() {
-            const content = document.getElementById('instructions-content');
-            const arrow = document.getElementById('accordion-arrow');
-            if (content.style.display === "none" || content.style.display === "") {
-                content.style.display = "block";
-                arrow.innerText = "▼";
-            } else {
-                content.style.display = "none";
-                arrow.innerText = "▲";
-            }
+        function toggleInstructions(show) {
+            const modal = document.getElementById('instructions-modal');
+            modal.style.display = show ? "flex" : "none";
         }
     </script>
 </body>
