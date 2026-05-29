@@ -168,4 +168,474 @@
                 arrow.innerText = "▲";
             }
         }
+    // Unique Firebase Configuration Map Keys
+        const firebaseConfig = {
+            apiKey: "AIzaSyCE1Y-fFIWAvMy3zeLhDW_3K66y4-AyjqE",
+            authDomain: "dhayam-online.firebaseapp.com",
+            projectId: "dhayam-online",
+            storageBucket: "dhayam-online.firebasestorage.app",
+            messagingSenderId: "506391921453",
+            appId: "1:506391921453:web:bcbe4d81c17835b8c489a4"
+        };
+
+        // Initialize Cloud Modules
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        let currentUser = null;
+        let gameRoomId = "global_shared_room"; 
+
+        // Core Dynamic Properties
+        let currentTurnIdx = 0;
+        let rolledBank = [];
+        let selectedTokenData = null;
+        let tokensOnBoard = [];
+        let players = [];
+        let globalStartingCoins = 6;
+        let gameStarted = false;
+
+        // Traditional Layout Mappings (100% Verified 7x7 Grid Coordinate Matrix)
+        const safeHavenCells = [3, 8, 12, 21, 27, 36, 40, 45];
+        const centerHubCell = 24;
+        const colorPalette = ['#dc2626', '#2563eb', '#ea580c', '#7c3aed'];
+
+        // Extract custom room codes directly from URL path routing parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('room')) {
+            gameRoomId = urlParams.get('room');
+        }
+
+        // --- AUTHENTICATION INTERFACE LAYER ---
+        function signInWithGoogle() {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider)
+                .then((result) => {
+                    currentUser = result.user;
+                    document.getElementById('auth-screen').style.display = 'none';
+                    document.getElementById('game-interface').style.display = 'block';
+                    document.getElementById('welcome-banner').innerText = `Hello, ${currentUser.displayName}!`;
+                    
+                    initializeOnlineRoom();
+                })
+                .catch((err) => {
+                    console.error("Auth Failed:", err);
+                    alert("Authentication Error. Check Firebase Console settings.");
+                });
+        }
+
+        // --- REALTIME FIRESTORE LOBBY SYNC ---
+        function initializeOnlineRoom() {
+            document.getElementById('room-info').innerText = `Connected Room ID: ${gameRoomId}`;
+
+            db.collection("rooms").doc(gameRoomId).onSnapshot((doc) => {
+                if (doc.exists) {
+                    const data = doc.data();
+                    gameStarted = data.gameStarted || false;
+                    players = data.players || [];
+                    rolledBank = data.rolledBank || [];
+                    currentTurnIdx = data.currentTurnIdx || 0;
+                    tokensOnBoard = data.tokensOnBoard || [];
+                    globalStartingCoins = data.globalStartingCoins || 6;
+
+                    updateLobbyUI(data.waitingLobby || []);
+                    renderEverything();
+                } else {
+                    // Initialize clean room state if it doesn't exist yet
+                    db.collection("rooms").doc(gameRoomId).set({
+                        gameStarted: false,
+                        waitingLobby: [],
+                        players: [],
+                        rolledBank: [],
+                        tokensOnBoard: [],
+                        currentTurnIdx: 0,
+                        globalStartingCoins: 6
+                    });
+                }
+            });
+        }
+
+        function updateLobbyUI(waitingLobby) {
+            const listContainer = document.getElementById('player-badge-list');
+            const stateTag = document.getElementById('lobby-state-tag');
+            const startBtn = document.getElementById('start-game-btn');
+            const joinBtn = document.getElementById('join-lobby-btn');
+
+            listContainer.innerHTML = '';
+
+            if (gameStarted) {
+                stateTag.innerText = "Match Live";
+                stateTag.style.color = "#10b981";
+                joinBtn.style.display = "none";
+                startBtn.style.display = "none";
+                return;
+            }
+
+            if (waitingLobby.length === 0) {
+                listContainer.innerHTML = '<div style="color:#94a3b8; font-size:0.8rem; font-style:italic; padding:4px;">No players waiting.</div>';
+                startBtn.style.display = "none";
+                return;
+            }
+
+            waitingLobby.forEach((p, idx) => {
+                const badge = document.createElement('div');
+                badge.className = "player-badge ready";
+                badge.innerHTML = `
+                    <span style="width:8px; height:8px; background:${colorPalette[idx % 4]}; border-radius:50%;"></span>
+                    <span>${p.name} ${idx === 0 ? '(Host)' : ''}</span>
+                `;
+                listContainer.appendChild(badge);
+            });
+
+            // Show Join button only if current authenticated user isn't in lobby yet
+            const alreadyJoined = waitingLobby.some(p => p.uid === currentUser.uid);
+            joinBtn.style.display = alreadyJoined ? "none" : "block";
+
+            // First player to join acts as Host and holds Start permissions
+            if (waitingLobby[0] && waitingLobby[0].uid === currentUser.uid && waitingLobby.length >= 2) {
+                startBtn.style.display = "block";
+            } else {
+                startBtn.style.display = "none";
+            }
+        }
+
+        function joinLobbyMatch() {
+            if (!currentUser) return;
+            
+            const roomRef = db.collection("rooms").doc(gameRoomId);
+            db.runTransaction(async (transaction) => {
+                const sfDoc = await transaction.get(roomRef);
+                if (!sfDoc.exists) return;
+
+                let lobby = sfDoc.data().waitingLobby || [];
+                if (!lobby.some(p => p.uid === currentUser.uid) && lobby.length < 4) {
+                    lobby.push({
+                        uid: currentUser.uid,
+                        name: currentUser.displayName.split(' ')[0]
+                    });
+                    transaction.update(roomRef, { waitingLobby: lobby });
+                }
+            });
+        }
+
+        function launchLobbyGame() {
+            const roomRef = db.collection("rooms").doc(gameRoomId);
+            
+            roomRef.get().then((doc) => {
+                if (!doc.exists) return;
+                const lobby = doc.data().waitingLobby || [];
+                if (lobby.length < 2) return;
+
+                let initialPlayersList = lobby.map((p, i) => ({
+                    name: p.name,
+                    uid: p.uid,
+                    index: i,
+                    tokensInYard: 6,
+                    tokensInSuccessYard: 0
+                }));
+
+                // Take initial state snapshot before saving match launch sequence
+                saveStateSnapshot([], [], initialPlayersList, 0);
+
+                roomRef.update({
+                    gameStarted: true,
+                    players: initialPlayersList,
+                    currentTurnIdx: 0,
+                    rolledBank: [],
+                    tokensOnBoard: []
+                });
+            });
+        }
+
+        // --- SNAPSHOT RESTORE STATE HISTORY ENGINE ---
+        function saveStateSnapshot(bank, tokens, playersList, turn) {
+            db.collection("rooms").doc(gameRoomId).collection("history").add({
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                rolledBank: JSON.parse(JSON.stringify(bank)),
+                tokensOnBoard: JSON.parse(JSON.stringify(tokens)),
+                players: JSON.parse(JSON.stringify(playersList)),
+                currentTurnIdx: turn
+            });
+        }
+
+        function restorePreviousSnapshot() {
+            db.collection("rooms").doc(gameRoomId).collection("history")
+                .orderBy("timestamp", "desc")
+                .limit(1)
+                .get()
+                .then((snapshot) => {
+                    if (!snapshot.empty) {
+                        const previousState = snapshot.docs[0].data();
+                        
+                        // Revert active main room record back to previous values
+                        db.collection("rooms").doc(gameRoomId).update({
+                            rolledBank: previousState.rolledBank,
+                            tokensOnBoard: previousState.tokensOnBoard,
+                            players: previousState.players,
+                            currentTurnIdx: previousState.currentTurnIdx
+                        }).then(() => {
+                            // Wipe the restored snapshot instance out of tracking history
+                            snapshot.docs[0].ref.delete();
+                        });
+                    } else {
+                        alert("No snapshot logs found to restore!");
+                    }
+                });
+        }
+
+        // --- CORE GAME BOX INTERACTION LOGIC ---
+        function rollSandboxDice() {
+            if (!gameStarted) return;
+            const values = [1, 2, 3, 4, 5, 6, 12];
+            const roll = values[Math.floor(Math.random() * values.length)];
+            
+            // Create backup log snapshot prior to action
+            saveStateSnapshot(rolledBank, tokensOnBoard, players, currentTurnIdx);
+
+            rolledBank.push(roll);
+            db.collection("rooms").doc(gameRoomId).update({ rolledBank: rolledBank });
+        }
+
+        function removeBankDie(idx) {
+            saveStateSnapshot(rolledBank, tokensOnBoard, players, currentTurnIdx);
+            rolledBank.splice(idx, 1);
+            db.collection("rooms").doc(gameRoomId).update({ rolledBank: rolledBank });
+        }
+
+        function nextPlayerTurn() {
+            if (!players || players.length === 0) return;
+            
+            saveStateSnapshot(rolledBank, tokensOnBoard, players, currentTurnIdx);
+            currentTurnIdx = (currentTurnIdx + 1) % players.length;
+            
+            db.collection("rooms").doc(gameRoomId).update({
+                currentTurnIdx: currentTurnIdx,
+                rolledBank: []
+            });
+        }
+
+        function selectTokenFromTray() {
+            selectedTokenData = { source: 'tray' };
+            renderEverything();
+        }
+
+        function selectTokenFromBoard(playerIdx, cellIdx, event) {
+            event.stopPropagation();
+            let matchedToken = tokensOnBoard.find(t => t.playerIdx === playerIdx && t.cellIdx === cellIdx);
+            if (matchedToken) {
+                selectedTokenData = { source: 'board', id: matchedToken.id, playerIdx: playerIdx };
+                renderEverything();
+            }
+        }
+
+        function handleCellClick(cellIdx) {
+            if (!selectedTokenData || !players || players.length === 0) return;
+            let activePlayer = players[currentTurnIdx];
+
+            // Verify if action is being taken by authenticated current user turn
+            if (activePlayer.uid !== currentUser.uid) {
+                alert("It is not your turn!");
+                return;
+            }
+
+            saveStateSnapshot(rolledBank, tokensOnBoard, players, currentTurnIdx);
+
+            if (selectedTokenData.source === 'tray') {
+                if (activePlayer.tokensInYard <= 0) return;
+                
+                if (cellIdx === centerHubCell) {
+                    activePlayer.tokensInYard--;
+                    activePlayer.tokensInSuccessYard++;
+                } else {
+                    let nextId = `tk_${currentTurnIdx}_${Date.now()}`;
+                    tokensOnBoard.push({ id: nextId, playerIdx: currentTurnIdx, cellIdx: cellIdx });
+                    activePlayer.tokensInYard--;
+                }
+            } 
+            else if (selectedTokenData.source === 'board') {
+                let tokenInstance = tokensOnBoard.find(t => t.id === selectedTokenData.id);
+                if (tokenInstance) {
+                    if (cellIdx === centerHubCell) {
+                        tokensOnBoard = tokensOnBoard.filter(t => t.id !== tokenInstance.id);
+                        players[tokenInstance.playerIdx].tokensInSuccessYard++;
+                    } else {
+                        if (!safeHavenCells.includes(cellIdx)) {
+                            let victims = tokensOnBoard.filter(t => t.cellIdx === cellIdx && t.playerIdx !== currentTurnIdx);
+                            victims.forEach(v => {
+                                players[v.playerIdx].tokensInYard++;
+                                tokensOnBoard = tokensOnBoard.filter(t => t.id !== v.id);
+                            });
+                        }
+                        tokenInstance.cellIdx = cellIdx;
+                    }
+                }
+            }
+
+            selectedTokenData = null;
+            db.collection("rooms").doc(gameRoomId).update({
+                tokensOnBoard: tokensOnBoard,
+                players: players
+            });
+        }
+
+        // --- BOARD RENDERING ENGINE ---
+        function renderGlobalStatusMatrix() {
+            const table = document.getElementById('matrix-table');
+            table.innerHTML = '';
+            if (!players || players.length === 0) return;
+
+            let headerRow = document.createElement('tr');
+            let cornerTh = document.createElement('th');
+            cornerTh.innerText = 'Yard';
+            headerRow.appendChild(cornerTh);
+
+            players.forEach(p => {
+                let th = document.createElement('th');
+                th.innerText = p.name;
+                th.style.borderTop = `4px solid ${colorPalette[p.index % 4]}`;
+                headerRow.appendChild(th);
+            });
+            table.appendChild(headerRow);
+
+            let activeRow = document.createElement('tr');
+            let activeLabelTd = document.createElement('td');
+            activeLabelTd.className = 'label-cell';
+            activeLabelTd.innerText = 'Active';
+            activeRow.appendChild(activeLabelTd);
+
+            players.forEach(p => {
+                let td = document.createElement('td');
+                td.innerText = p.tokensInYard;
+                activeRow.appendChild(td);
+            });
+            table.appendChild(activeRow);
+
+            let successRow = document.createElement('tr');
+            let successLabelTd = document.createElement('td');
+            successLabelTd.className = 'label-cell';
+            successLabelTd.innerText = 'Success';
+            successRow.appendChild(successLabelTd);
+
+            players.forEach(p => {
+                let td = document.createElement('td');
+                td.innerText = p.tokensInSuccessYard;
+                successRow.appendChild(td);
+            });
+            table.appendChild(successRow);
+        }
+
+        function renderEverything() {
+            if (!players || players.length === 0) {
+                document.getElementById('turn-indicator').innerText = "Lobby Stage: Join Match Below";
+                return;
+            }
+            
+            const activePlayer = players[currentTurnIdx];
+            if (!activePlayer) return;
+
+            document.getElementById('turn-indicator').innerText = `${activePlayer.name.toUpperCase()}'s Turn`;
+            document.getElementById('turn-indicator').style.borderLeft = `8px solid ${colorPalette[currentTurnIdx % 4]}`;
+            document.getElementById('tray-title').innerText = `${activePlayer.name}'s Interactive Yard:`;
+            
+            renderGlobalStatusMatrix();
+
+            // Render Dice Bank Area
+            const bankBox = document.getElementById('roll-bank-box');
+            bankBox.innerHTML = '';
+            if (rolledBank.length === 0) {
+                bankBox.innerText = "No active rolls";
+            } else {
+                rolledBank.forEach((val, idx) => {
+                    const chip = document.createElement('span');
+                    chip.className = 'roll-chip';
+                    chip.innerText = val;
+                    chip.onclick = () => removeBankDie(idx);
+                    bankBox.appendChild(chip);
+                });
+            }
+
+            // Render Player Interactive Onboarding Yard
+            const activeTray = document.getElementById('active-player-tray');
+            activeTray.innerHTML = '';
+            if (activePlayer.tokensInYard <= 0) {
+                activeTray.innerHTML = '<span style="color:#a0aec0; font-size:0.8rem; font-style:italic;">Yard Empty</span>';
+            } else {
+                const isSel = (selectedTokenData && selectedTokenData.source === 'tray');
+                let symbol = activePlayer.name.charAt(0).toUpperCase();
+                let trayToken = document.createElement('div');
+                trayToken.className = `token p${(currentTurnIdx % 4) + 1}`;
+                if (isSel) trayToken.classList.add('selected');
+                trayToken.innerText = `${symbol} ×${activePlayer.tokensInYard}`;
+                trayToken.onclick = () => selectTokenFromTray();
+                activeTray.appendChild(trayToken);
+            }
+
+            // Build 7x7 Layout Matrix
+            const gridContainer = document.getElementById('board-grid');
+            gridContainer.innerHTML = '';
+
+            for (let i = 0; i < 49; i++) {
+                const cellElement = document.createElement('div');
+                cellElement.className = 'cell';
+                cellElement.onclick = () => handleCellClick(i);
+
+                if (safeHavenCells.includes(i)) cellElement.classList.add('safe-haven');
+                if (i === centerHubCell) {
+                    cellElement.classList.add('center-hub');
+                    cellElement.innerText = 'GOAL';
+                }
+
+                if (selectedTokenData && selectedTokenData.source === 'board') {
+                    let activeToken = tokensOnBoard.find(t => t.id === selectedTokenData.id);
+                    if (activeToken && activeToken.cellIdx === i) {
+                        cellElement.classList.add('selected-cell');
+                    }
+                }
+
+                const tokenContainer = document.createElement('div');
+                tokenContainer.className = 'token-container';
+                cellElement.appendChild(tokenContainer);
+
+                let occupants = tokensOnBoard.filter(t => t.cellIdx === i);
+                let groups = {};
+                occupants.forEach(t => {
+                    if (!groups[t.playerIdx]) groups[t.playerIdx] = [];
+                    groups[t.playerIdx].push(t);
+                });
+
+                Object.keys(groups).forEach(pIdxStr => {
+                    let pIdx = parseInt(pIdxStr);
+                    if (!players[pIdx]) return;
+                    let cluster = groups[pIdx];
+                    let tokenNameSymbol = players[pIdx].name.charAt(0).toUpperCase();
+
+                    const tokElement = document.createElement('div');
+                    tokElement.className = `token p${(pIdx % 4) + 1}`;
+                    tokElement.innerText = cluster.length > 1 ? `${tokenNameSymbol}×${cluster.length}` : tokenNameSymbol;
+                    
+                    if (selectedTokenData && selectedTokenData.source === 'board' && cluster.some(t => t.id === selectedTokenData.id)) {
+                        tokElement.classList.add('selected');
+                    }
+                    
+                    tokElement.onclick = (e) => selectTokenFromBoard(pIdx, i, e);
+                    tokenContainer.appendChild(tokElement);
+                });
+
+                gridContainer.appendChild(cellElement);
+            }
+        }
+
+        function toggleInstructions() {
+            const content = document.getElementById('instructions-content');
+            const arrow = document.getElementById('accordion-arrow');
+            if (content.style.display === "none" || content.style.display === "") {
+                content.style.display = "block";
+                arrow.innerText = "▼";
+            } else {
+                content.style.display = "none";
+                arrow.innerText = "▲";
+            }
+        }
     </script>
+</body>
+</html>
